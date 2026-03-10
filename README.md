@@ -1,4 +1,4 @@
-# softball-fraud-check
+# softball-fraud-check-pages
 D1 Softball Early-Season Volatility Checker (Feb 2026)
 
 # ⚡ Executive Summary
