@@ -1,5 +1,5 @@
 # softball-fraud-check-pages
-D1 Softball Early-Season Volatility Checker (Feb 2026)
+D1 Softball Early-Season Volatility Checker (Mar 2026)
 
 # ⚡ Executive Summary
 This dashboard identifies early-season volatility, regression candidates, and structurally strong contenders in NCAA Division I softball using Pythagorean expectation, strength of schedule, and proprietary team strength metrics.
