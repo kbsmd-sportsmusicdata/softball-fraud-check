@@ -108,6 +108,14 @@ select.sf {
   background-repeat:no-repeat; background-position:right 10px center; padding-right:26px;
 }
 select.sf:focus { outline:none; border-color:var(--acc2); }
+/* Force readable option list — native dropdown inherits color:var(--t1)=#eef3fa (near-white)
+   which becomes invisible on the OS's white popup background without this override. */
+select.sf option, .inp-g select option {
+  background:#132133; color:#c8d8e8; font-family:'Montserrat',sans-serif;
+}
+select.sf option:checked, .inp-g select option:checked {
+  background:#1e3550; color:#eef3fa;
+}
 .rank-btns { display:flex; gap:4px; }
 .rb {
   flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border2);
@@ -938,49 +946,66 @@ var ESPN_IDS = {
   'Washington St.':265,'Iowa':2294,'Minnesota':135,'Michigan St.':127
 };
 var LOGO_IMGS = {};
-function preloadLogos(teams) {
-  teams.forEach(function(team) {
-    var id = ESPN_IDS[team];
-    if (!id || (LOGO_IMGS[team] && LOGO_IMGS[team]._loaded)) return;
-    var img = new Image();
-    img._loaded = false;
-    img.onload  = function() { img._loaded = true; if (scatterChart) scatterChart.update('none'); };
-    img.onerror = function() { img._loaded = false; };
-    img.src = 'https://a.espncdn.com/i/teamlogos/ncaa/500/' + id + '.png';
-    LOGO_IMGS[team] = img;
-  });
-}
-
-// ── Logo backdrop plugin (Top 25 scatter only) ──
+// ── Logo backdrop plugin — draws colored circles on canvas only (no cross-origin image drawing) ──
+// Images are rendered via DOM overlay (renderLogoOverlay) to avoid canvas CORS taint.
 var logoPlugin = {
   id: 'logos',
   afterDatasetsDraw: function(chart) {
-    if (activeRank !== 't25') return;
+    if (activeRank !== 'top25') return;
     var ctx = chart.ctx;
     var meta = chart.getDatasetMeta(0);
     if (!meta || !meta.data) return;
     var pts = chart.data.datasets[0].data;
     meta.data.forEach(function(point, i) {
       var raw = pts[i];
-      var x = point.x, y = point.y, r = 13;
-      // Colored backdrop circle
+      // White backdrop + 3px colored ring — maximises logo readability while preserving tier color signal
+      var x = point.x, y = point.y, r = 15;
       ctx.save();
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = fdDivFill(raw.y); ctx.fill();
-      ctx.strokeStyle = fdDivBorder(raw.y); ctx.lineWidth = 1.5; ctx.stroke();
-      // Logo clipped to circle
-      var img = LOGO_IMGS[raw.team];
-      if (img && img._loaded) {
-        ctx.save();
-        ctx.beginPath(); ctx.arc(x, y, r - 2, 0, Math.PI * 2); ctx.clip();
-        var sz = (r - 2) * 2;
-        ctx.drawImage(img, x - (r - 2), y - (r - 2), sz, sz);
-        ctx.restore();
-      }
+      ctx.fillStyle = '#f0f2f5'; ctx.fill();          // near-white: logos designed for light bg
+      ctx.strokeStyle = fdDivBorder(raw.y); ctx.lineWidth = 3; ctx.stroke();  // thick colored ring = tier
       ctx.restore();
     });
   }
 };
+
+// ── DOM logo overlay — positions <img> tags over canvas to sidestep CORS canvas taint ──
+// Design: white backdrop circle + thick colored ring (tier signal), logo on top.
+function renderLogoOverlay(chart) {
+  var old = document.getElementById('scatterLogoOverlay');
+  if (old) old.remove();
+  if (activeRank !== 'top25' || !chart) return;
+  var canvas = document.getElementById('scatterCanvas');
+  if (!canvas) return;
+  var container = canvas.parentElement;
+  var meta = chart.getDatasetMeta(0);
+  var pts  = chart.data.datasets[0].data;
+  if (!meta || !meta.data || !meta.data.length) return;
+  var overlay = document.createElement('div');
+  overlay.id = 'scatterLogoOverlay';
+  overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+  container.appendChild(overlay);
+  meta.data.forEach(function(point, i) {
+    var raw = pts[i];
+    var id  = ESPN_IDS[raw.team];
+    if (!id) return;
+    var x = point.x, y = point.y, r = 15;
+    var wrap = document.createElement('div');
+    wrap.style.cssText =
+      'position:absolute;width:' + (r*2) + 'px;height:' + (r*2) + 'px;' +
+      'left:' + (x-r) + 'px;top:' + (y-r) + 'px;' +
+      'border-radius:50%;overflow:hidden;box-sizing:border-box;' +
+      'background:#f0f2f5;' +                              /* white bg — logos built for light surface */
+      'border:3px solid ' + fdDivBorder(raw.y) + ';';     /* thick ring = FD tier color */
+    var img = document.createElement('img');
+    img.src = 'https://a.espncdn.com/i/teamlogos/ncaa/500/' + id + '.png';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    img.alt = raw.team;
+    img.onerror = function() { img.style.display = 'none'; };
+    wrap.appendChild(img);
+    overlay.appendChild(wrap);
+  });
+}
 
 // ── State ──
 var activeConf = 'all', activeRank = 'all', activeTab = 'fraud';
@@ -1173,8 +1198,40 @@ var quadrantPlugin = {
   }
 };
 
+// ── Analyst reads for Top-25 scatter tooltips ──
+var SCOUT_READS = {
+  'Tennessee':     'Undefeated with near-neutral FD — run differential validates every win. SOS lags the record but efficiency is legit.',
+  'Texas':         'Near-perfect record, Mild Over on a soft draw. FD will self-correct once Big 12 schedule hardens.',
+  'UCLA':          'Record and underlying metrics are tightly aligned. Lowest SOS in the top 10 — monitor as competition stiffens.',
+  'Nebraska':      'Run differential says they’re better than 18-5. Moderate SOS limits the ceiling but upside is real if they convert.',
+  'Alabama':       'Undefeated, near-neutral FD, right on the SOS threshold. The cleanest top-5 team by efficiency measures.',
+  'Arkansas':      'Winning at a high clip while slightly underperforming run differential. Expect record to track closer to Pythagorean as games pile up.',
+  'Florida':       'Dominant record with quality SOS and near-neutral FD. Metrics and wins agree — a well-rounded legitimate contender.',
+  'Texas Tech':    'Best record in the Top 25 while playing above-average competition and underperforming Pythagorean. Hidden quality here.',
+  'Oklahoma':      'Slight negative FD on a tough schedule — run differential says they’re playing even better than the record shows.',
+  'Virginia Tech': 'Mild Over (+0.056) on a respectable SOS (0.362). Unlike Resume Inflation peers, the schedule backs up the overperformance.',
+  'Florida St.':   'Neutral FD in a quality conference. Losses are field-tested — metrics say the record is fair and the floor is solid.',
+  'Washington':    'Run differential is considerably stronger than the W-L. Under-the-radar efficiency suggests more wins are coming.',
+  'LSU':           'Largest negative FD in this tier. Pythagorean says they should be 8+ wins ahead of where they sit — primed for a run.',
+  'Virginia':      'One of the toughest schedules in the Top 25. Slight positive FD means they’re outperforming a hard draw — high-end resume.',
+  'Mississippi St.':'Impressive record against quality competition with slight negative FD. Run differential values them even higher. Quiet contender.',
+  'Oregon':        'Underperforming Pythagorean with a moderate SOS. Run differential suggests 4-5 extra wins are in the pipeline.',
+  'Arizona':       'Near-perfect FD alignment — record and run differential are essentially in agreement. Consistent, reliable performer.',
+  'Georgia':       'Deepest negative FD in Top 25 by a wide margin (-0.122). Pythagorean expects 10+ more wins — severe underperformance due to correct.',
+  'Oklahoma St.':  'Second-largest negative FD (-0.114). Underlying numbers point to a team significantly better than their record. Late-surge candidate.',
+  'Stanford':      'Metrics and record are tightly aligned on a moderate schedule. Neutral FD — playing at expected level.',
+  'UCF':           'Quality schedule, strong record, and negative FD — run differential says they’re undervalued at #21. Potential dark horse.',
+  'Grand Canyon':  'Only team with an undefeated record playing a genuinely hard schedule (SOS 0.50). Mild Over but very different from inflation.',
+  'Auburn':        'Highest positive FD in Top 25, soft schedule (SOS 0.298). Classic Resume Inflation profile — wins exceed what run differential predicts.',
+  'Clemson':       'Mild underperformance on a moderate SOS. Metrics suggest a few extra wins are there but schedule ceiling keeps upside limited.',
+  'Duke':          'Near-neutral FD — playing almost exactly at expectation. Moderate SOS makes this a fair, accurate record.'
+};
+
 // ── Scatter ──
 function buildScatter(data) {
+  // Clean up any existing logo overlay before rebuilding chart
+  var oldOverlay = document.getElementById('scatterLogoOverlay');
+  if (oldOverlay) oldOverlay.remove();
   // Single dataset — per-point colors from the same 5-stop FD ramp as the bar chart
   var pts = data.filter(function(d) { return d.sos > 0; })
                .map(function(d) {
@@ -1182,7 +1239,7 @@ function buildScatter(data) {
                           team: d.team, tsr: d.tsr, rank: d.rank,
                           wins: d.wins, losses: d.losses };
                });
-  var isTop25 = (activeRank === 't25');
+  var isTop25 = (activeRank === 'top25');
   if (scatterChart) { scatterChart.destroy(); scatterChart = null; }
   var ctx = document.getElementById('scatterCanvas').getContext('2d');
   scatterChart = new Chart(ctx, {
@@ -1196,7 +1253,7 @@ function buildScatter(data) {
         borderColor:     pts.map(function(d) { return fdDivBorder(d.y); }),
         borderWidth: 1,
         pointRadius:     isTop25 ? 0 : 4.5,
-        pointHitRadius:  isTop25 ? 14 : 7,
+        pointHitRadius:  isTop25 ? 16 : 7,
         pointHoverRadius: isTop25 ? 0 : 7
       }]
     },
@@ -1216,17 +1273,24 @@ function buildScatter(data) {
             label: function(item) {
               var r = item.raw;
               var s = r.y >= 0 ? '+' : '';
-              return [
+              var lines = [
                 '  Fraud Delta: ' + s + r.y.toFixed(3),
                 '  Profile: ' + fdDivLabel(r.y),
                 '  SOS: ' + r.x.toFixed(3),
                 '  TSR: ' + r.tsr.toFixed(2),
                 '  Rank: ' + (r.rank <= 304 ? '#' + r.rank : 'NR')
               ];
+              var read = SCOUT_READS[r.team];
+              if (read) { lines.push('', '  → ' + read); }
+              return lines;
             }
           }
         }
       },
+      animation: {
+        onComplete: function(anim) { renderLogoOverlay(anim.chart); }
+      },
+      onResize: function(chart) { renderLogoOverlay(chart); },
       scales: {
         x: {
           min: 0,
@@ -1242,8 +1306,6 @@ function buildScatter(data) {
       }
     }
   });
-  // Pre-load logos for visible teams when Top 25 filter is active
-  if (isTop25) { preloadLogos(pts.map(function(d) { return d.team; })); }
 }
 
 // ── Heatmap sort state ──
