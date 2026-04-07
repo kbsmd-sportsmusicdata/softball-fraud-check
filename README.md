@@ -2,7 +2,7 @@
 
 Interactive analytics dashboard identifying **inflated records, hidden contenders, and volatility profiles** in NCAA Division I Softball.
 
-🔗 [Live Dashboard](https://kbsmd-sportsmusicdata.github.io/softball-fraud-check-pages/)
+🔗 [Live Dashboard](https://kbsmd-sportsmusicdata.github.io/softball-volatility-check-pages/)
 
 This project evaluates whether a team's record aligns with its underlying performance using **Pythagorean expectation, strength of schedule, and team strength metrics**.
 
@@ -29,11 +29,10 @@ Key dataset characteristics:
 
 The goal is to identify **structural strength vs short-term variance** early in the season.
 
----Softball Volatility Decision Board.png # Screenshot used in README Softball Volatility Tracker Preview
 
 # Dashboard Preview
 
-![Softball Volatility Dashboard](softball_volatility_tracker_preview.png)
+![Softball Volatility Dashboard](Softball Volatility Tracker Preview.png)
 
 ![Softball Volatility Dashboard](Softball Volatility Decision Board Screenshot.png)
 
@@ -229,7 +228,7 @@ Used to evaluate **high-leverage offensive volatility**.
 softball-volatility-check-pages
 │
 ├── README.md # Project documentation
-├── Softball Volatility Decision Board.png # Screenshot used in README
+├── Softball Volatility Decision Board Screenshot.png # Screenshot used in README
 ├── index.html # Interactive volatility dashboard
 ├── Softball Volatility Tracker Preview.png # Screenshot used in README
 │
