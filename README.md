@@ -24,16 +24,18 @@ Key dataset characteristics:
 
 - Division I teams analyzed  
 - Early-season performance window  
-- Run differential based metrics  
+- Run differential-based metrics  
 - Strength-of-schedule adjustments  
 
 The goal is to identify **structural strength vs short-term variance** early in the season.
 
----
+---Softball Volatility Decision Board.png # Screenshot used in README Softball Volatility Tracker Preview
 
 # Dashboard Preview
 
 ![Softball Volatility Dashboard](softball_volatility_tracker_preview.png)
+
+![Softball Volatility Dashboard](Softball Volatility Decision Board Screenshot.png)
 
 ---
 
@@ -86,7 +88,7 @@ Indicators:
 Implications:
 
 - Likely cooling once conference play begins  
-- Record may not reflect sustainable run profile  
+- Record may not reflect a sustainable run profile  
 - Pressure situations may expose bullpen depth  
 
 
@@ -224,16 +226,16 @@ Used to evaluate **high-leverage offensive volatility**.
 # Repository Structure
 
 ```
-softball-fraud-check-pages
+softball-volatility-check-pages
 │
-├── index.html # Interactive volatility dashboard
 ├── README.md # Project documentation
-├── dashboard-preview.png # Screenshot used in README
+├── Softball Volatility Decision Board.png # Screenshot used in README
+├── index.html # Interactive volatility dashboard
+├── Softball Volatility Tracker Preview.png # Screenshot used in README
 │
 └── data
   └── processed_metrics.csv
 ```
-
 
 
 # Tech Stack
@@ -252,7 +254,7 @@ This project is part of a broader [sports analytics portfolio](https://www.notio
 - coaching decision-support tools  
 - predictive and volatility modeling in women's sports  
 
-Related work includes NCAA coaching pipeline research and demographic analytics dashboards.
+Related work includes NCAA D1 coaching pipelines and demographic analytics dashboards.
 
 
 
@@ -260,4 +262,4 @@ Related work includes NCAA coaching pipeline research and demographic analytics 
 Krystal Beasley | Sports Analytics Portfolio  
 [LinkedIn](https://www.linkedin.com/in/krystalbeasley/) | [GitHub](https://github.com/kbsmd-sportsmusicdata)
 
-Email Me: hey@krystalbcreative.com
+Reach Out: hey@krystalbcreative.com
